@@ -1,0 +1,60 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "perfect"
+dynamic = ["version"]
+description = "Python implementation of the 'Perfect' serialization format used in Infinity Nikki."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "LukeFZ" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = []
+
+[project.urls]
+Documentation = "https://github.com/NikkiTools/perfect#readme"
+Issues = "https://github.com/NikkiTools/perfect/issues"
+Source = "https://github.com/NikkiTools/perfect"
+
+[tool.hatch.version]
+path = "src/perfect/__about__.py"
+
+[tool.hatch.envs.default]
+installer = "uv"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/perfect tests}"
+
+[tool.coverage.run]
+source_pkgs = ["perfect", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/perfect/__about__.py",
+]
+
+[tool.coverage.paths]
+perfect = ["src/perfect", "*/perfect/src/perfect"]
+tests = ["tests", "*/perfect/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
