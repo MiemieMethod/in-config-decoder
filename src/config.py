@@ -48,6 +48,16 @@ def decode_configs(I_N_DATA_PATH):
 
     init_data = init_function(methods)
 
+    name_to_bean_map = {}
+    bean_orders = {}
+    for i in init_data.beans:
+        bean = init_data.beans[i]
+        name_to_bean_map[bean._name] = bean
+        bean_orders[bean._name] = {}
+        if bean._name2number:
+            for field in bean._name2number:
+                bean_orders[bean._name][bean._name2number[field]] = field
+
     registry = TypeRegistry()
 
     for i in init_data.beans:
@@ -82,39 +92,38 @@ def decode_configs(I_N_DATA_PATH):
                         else:
                             built[key] = luaTable
 
-                    orders = {}
+                    def parseSpecialLuaTbale(luaTable):
+                        # table = None
+                        if luaTable._type == 'list':
+                            table = []
+                        elif luaTable._type == 'dict':
+                            table = {}
+                        else:
+                            table = {}
+                            # print(f'Unknown luaTable type {luaTable._type}')
+                        for i in luaTable:
+                            if i == '_type':
+                                continue
+                            if isinstance(table, list):
+                                table.append(luaTable[i])
+                                parseLuatable(table, i - 1, luaTable[i])
+                            elif isinstance(table, dict):
+                                parseLuatable(table, i, luaTable[i])
+                        return table
+
                     name = luaTable._name
                     # print(name)
-                    this_bean = None
-                    for j in init_data.beans:
-                        if init_data.beans[j]._name == name:
-                            this_bean = init_data.beans[j]
-                            break
+                    this_bean = name_to_bean_map.get(name)
                     if this_bean is None:
-                        table = None
                         if hasattr(luaTable, '_type'):
-                            if luaTable._type == 'list':
-                                table = []
-                            elif luaTable._type == 'dict':
-                                table = {}
-                            for j in luaTable:
-                                if j == '_type':
-                                    continue
-                                if isinstance(table, list):
-                                    table.append(luaTable[j])
-                                    parseLuatable(table, j - 1, luaTable[j])
-                                elif isinstance(table, dict):
-                                    parseLuatable(table, j, luaTable[j])
-                            return table
+                            return parseSpecialLuaTbale(luaTable)
                         else:
                             print(f'Bean {name} not found')
-                    for field in this_bean._name2number:
-                        orders[this_bean._name2number[field]] = field
+                    orders = bean_orders[name]
                     built = {
                         '_name': name,
                         '_id': luaTable._id
                     }
-                    luatable_type = type(luaTable)
                     for order in sorted(orders):
                         parseLuatable(built, orders[order], luaTable[orders[order]])
                     # print(built)
@@ -151,6 +160,6 @@ def decode_configs(I_N_DATA_PATH):
         elif table.mode == 'one':
             loaded_table = loaded_table.cache
 
-        os.makedirs(f'cfg/config_output/{table.value_type.split('.')[0]}', exist_ok=True)
-        with open(f'cfg/config_output/{table.file.replace('.bin', '.json').replace('.', '/', 1)}', 'w', encoding='utf-8') as f:
+        os.makedirs(f'cfg/config_output/{table.value_type.split(".")[0]}', exist_ok=True)
+        with open(f'cfg/config_output/{table.file.replace(".bin", ".json").replace(".", "/", 1)}', 'w', encoding='utf-8') as f:
             json.dump(loaded_table, f, ensure_ascii=False, indent=2)
