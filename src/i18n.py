@@ -1,6 +1,7 @@
 import csv
 import json
 import os
+import re
 import subprocess
 
 LOCALES = [
@@ -24,8 +25,14 @@ def decode_locres(I_N_DATA_PATH):
     for locale in LOCALES:
         os.makedirs(f'cfg/repo/TextMap/{locale}', exist_ok=True)
         subprocess.run(['./UnrealLocres', 'export', os.path.join(I_N_DATA_PATH, f'X6Game/Content/Localization/Game/{locale}/Game.locres'), '-f', 'csv', '-o', f'cfg/repo/TextMap/{locale}/Game.csv'], encoding='utf-8')
+        csv_path = f'cfg/repo/TextMap/{locale}/Game.csv'
+        with open(csv_path, 'rb') as f:
+            content = f.read().decode('utf-8')
+        content = re.sub(r',([^"\s]*?\r[^"\s]*?),', r',"$1",', content)
+        with open(csv_path, 'wb') as f:
+            f.write(content.encode('utf-8'))
         textmap = {}
-        with open(f'cfg/repo/TextMap/{locale}/Game.csv', 'r', encoding='utf-8') as f:
+        with open(csv_path, 'r', encoding='utf-8') as f:
             reader = csv.reader(f)
             for row in reader:
                 if row[0] == 'key':
