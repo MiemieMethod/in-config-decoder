@@ -2,6 +2,8 @@ import os
 import struct
 import subprocess
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
 OPCODE_MAP = {
     0xa: 0,
     0: 1,
@@ -175,9 +177,24 @@ def decode_lua_bytecode(output_base, full_file_path):
         f.write(data)
     subprocess.run(['java', '-jar', 'unluac.jar', output_path + 'c', '>', output_path], shell=True)
 
+
 def decode_luas(I_N_DATA_PATH):
     output_base = r'cfg/script'
-    for root, _, files in os.walk(os.path.join(I_N_DATA_PATH, r'X6Game/Content/Script')):
-        for file in files:
-            if file.endswith('.lua'):
-                decode_lua_bytecode(output_base, os.path.join(root, file))
+    script_path = os.path.join(I_N_DATA_PATH, r'X6Game/Content/Script')
+
+    lua_files = [
+        os.path.join(root, file)
+        for root, _, files in os.walk(script_path)
+        for file in files if file.endswith('.lua')
+    ]
+
+    completed = 0
+
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(decode_lua_bytecode, output_base, file) for file in lua_files]
+        for future in as_completed(futures):
+            future.result()
+
+            completed += 1
+
+            print(f"{completed} / {len(lua_files)}")
