@@ -19,6 +19,5 @@ def decode_just_configs(I_N_DATA_PATH):
     decode_configs(I_N_DATA_PATH)
 
 if __name__ == '__main__':
-    I_N_DATA_PATH = r'E:/I-N-Data'  # change here to your path
-    decode_infinity_nikki_data_repo(I_N_DATA_PATH)
-
+    I_N_DATA_PATH = r'C:\Program Files\InfinityNikkiGlobal Launcher\InfinityNikkiGlobal'  # change here to your path
+    decode_lua_and_configs(I_N_DATA_PATH)
