@@ -19,5 +19,5 @@ def decode_just_configs(I_N_DATA_PATH):
     decode_configs(I_N_DATA_PATH)
 
 if __name__ == '__main__':
-    I_N_DATA_PATH = r'C:\Program Files\InfinityNikkiGlobal Launcher\InfinityNikkiGlobal'  # change here to your path
+    I_N_DATA_PATH = r'E:\Downloads\FModel\Output\Exports'   # change here to your path
     decode_lua_and_configs(I_N_DATA_PATH)
