@@ -31,8 +31,8 @@ methods = {
     'GetEBuf': None,
 }
 
-def decode_configs(I_N_DATA_PATH, is_repo = False):
-    with open("cfg/script/GenV2/Cfg/CfgTypes.lua") as f:
+def decode_configs(I_N_CORE_DATA_PATH, is_repo = False):
+    with open("cfg/script/GenV2/1_5/Cfg/CfgTypes.lua") as f:
         lua = LuaRuntime(unpack_returned_tuples=True)
         config = lua.execute(f.read().replace('local UENewTable = _ENV.UENewTable', 'function UENewTable(size, value)\n\
             local t = {}\n\
@@ -154,7 +154,7 @@ def decode_configs(I_N_DATA_PATH, is_repo = False):
             registry=registry
         )
         print('Loading', table.file)
-        loaded_table = config_table.load(os.path.join(I_N_DATA_PATH, r'X6Game/Content/config_output'))
+        loaded_table = config_table.load(os.path.join(I_N_CORE_DATA_PATH, r'X6Game/Content/config_output'))
         # print(loaded_table)
 
         if table.mode == 'map':
@@ -177,13 +177,13 @@ def decode_configs(I_N_DATA_PATH, is_repo = False):
                 json.dump(loaded_table, f, ensure_ascii=False, indent=2)
 
 
-def decode_helper(I_N_DATA_PATH):
+def decode_helper(I_N_CORE_DATA_PATH):
     def replace_enum_string(s):
         pattern = r'PaperEnum\.Cfg\.(\w+\.\w+)\.(\w+)'
         result = re.sub(pattern, r'enums["\1"].\2', s)
         return result
 
-    with open("cfg/script/GenV2/Cfg/CfgTypes.lua") as f:
+    with open("cfg/script/GenV2/1_5/Cfg/CfgTypes.lua") as f:
         lua = LuaRuntime(unpack_returned_tuples=True)
         config = lua.execute(f.read().replace('local UENewTable = _ENV.UENewTable', 'function UENewTable(size, value)\n\
         local t = {}\n\
