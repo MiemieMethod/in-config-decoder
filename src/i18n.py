@@ -20,11 +20,11 @@ LOCALES = [
     'it',
 ]
 
-def decode_locres(I_N_DATA_PATH):
+def decode_locres(I_N_CORE_DATA_PATH):
     os.makedirs('ol', exist_ok=True)
     for locale in LOCALES:
         os.makedirs(f'cfg/repo/TextMap/{locale}', exist_ok=True)
-        subprocess.run(['./UnrealLocres', 'export', os.path.join(I_N_DATA_PATH, f'X6Game/Content/Localization/Game/{locale}/Game.locres'), '-f', 'csv', '-o', f'cfg/repo/TextMap/{locale}/Game.csv'], encoding='utf-8')
+        subprocess.run(['./UnrealLocres', 'export', os.path.join(I_N_CORE_DATA_PATH, f'X6Game/Content/Localization/Game/{locale}/Game.locres'), '-f', 'csv', '-o', f'cfg/repo/TextMap/{locale}/Game.csv'], encoding='utf-8')
         csv_path = f'cfg/repo/TextMap/{locale}/Game.csv'
         with open(csv_path, 'rb') as f:
             content = f.read().decode('utf-8')

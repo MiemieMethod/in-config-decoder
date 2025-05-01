@@ -177,7 +177,6 @@ def decode_lua_bytecode(output_base, full_file_path):
         f.write(data)
     subprocess.run(['java', '-jar', 'unluac.jar', output_path + 'c', '>', output_path], shell=True)
 
-
 def decode_luas(I_N_DATA_PATH):
     output_base = r'cfg/script'
     script_path = os.path.join(I_N_DATA_PATH, r'X6Game/Content/Script')
