@@ -9,6 +9,7 @@ from .vector import Vector2, Vector3, Vector4
 from .data_tag import DataTag, DataTagType
 from .serializable_object import SerializableObject
 
+
 class ByteBuf:
     enable_tag_skipping: ClassVar[bool] = False
 
@@ -26,18 +27,18 @@ class ByteBuf:
 
     def read_byte(self) -> int:
         return int.from_bytes(self._fp.read(1))
-    
+
     def read_bool(self):
         return self.read_byte() != 0
-    
+
     def _read_compressed_unsigned(self, max_count: int) -> int:
         first = self.read_byte()
         if not (first & 0x80):
             return first
 
-        if first == 0xff:
+        if first == 0xFF:
             return int.from_bytes(self._fp.read(max_count), "little", signed=False)
-        
+
         first_byte_mask = 0b01111111
         first_byte_shift = 0
 
@@ -57,90 +58,103 @@ class ByteBuf:
         value |= (first & first_byte_mask) << first_byte_shift
         assert max_count >= 0, "Invalid compressed integer"
         return value
-    
+
     def read_short(self) -> int:
         return self._read_compressed_unsigned(2)
-    
+
     def read_int(self):
         value = self._read_compressed_unsigned(4)
         if value > 0x80000000:
             value = int.from_bytes(value.to_bytes(4), signed=True)
-        
+
         return value
-    
+
     def read_long(self) -> int:
         return self._read_compressed_unsigned(8)
-    
+
     def read_net_header(self) -> int:
         return int.from_bytes(self._fp.read(4), "big")
-    
+
     def read_float(self) -> float:
         return struct.unpack("f", self._fp.read(4))[0]
-    
+
     def read_double(self) -> float:
         return struct.unpack("d", self._fp.read(8))[0]
-    
+
     def read_bytes(self) -> bytes:
         size = self.read_int()
         return self._fp.read(size)
-    
+
     def read_vector2(self) -> Vector2:
         return Vector2(self.read_float(), self.read_float())
-    
+
     def read_vector3(self) -> Vector3:
         return Vector3(self.read_float(), self.read_float(), self.read_float())
-    
+
     def read_vector4(self) -> Vector4:
-        return Vector4(self.read_float(), self.read_float(), self.read_float(), self.read_float())
-    
+        return Vector4(
+            self.read_float(), self.read_float(), self.read_float(), self.read_float()
+        )
+
     def read_data_tag(self) -> DataTag:
         assert self.has_data()
         return DataTag.from_value(self.read_short())
-    
+
     def read_fixed_short(self) -> int:
-        return int.from_bytes(self._fp.read(2), "little", signed = True)
+        return int.from_bytes(self._fp.read(2), "little", signed=True)
 
     def read_fixed_int(self) -> int:
-        return int.from_bytes(self._fp.read(4), "little", signed = True)
-    
+        return int.from_bytes(self._fp.read(4), "little", signed=True)
+
     def read_fixed_long(self) -> int:
-        return int.from_bytes(self._fp.read(8), "little", signed = True)
-    
+        return int.from_bytes(self._fp.read(8), "little", signed=True)
+
     def read_object_tags(self):
         while (tag := self.read_data_tag()).type != DataTagType.END_OBJECT:
             yield tag
-    
-    def read_object[TObject: SerializableObject](self, clazz: type[TObject], read_size: bool = True) -> TObject:
+
+    def read_object[TObject: SerializableObject](
+        self, clazz: type[TObject], read_size: bool = True
+    ) -> TObject:
         data = ByteBuf(self.read_bytes()) if read_size else self
         value = clazz.from_buffer(data)
         if read_size:
-            assert not data.has_data(), f"Did not read entire buffer when reading object of type {clazz}"
+            assert not data.has_data(), (
+                f"Did not read entire buffer when reading object of type {clazz}"
+            )
 
         return value
-    
-    def read_array[TValue](self, read_func: Callable[[ByteBuf], TValue], read_tag: bool = True) -> list[TValue]:
+
+    def read_array[TValue](
+        self, read_func: Callable[[ByteBuf], TValue], read_tag: bool = True
+    ) -> list[TValue]:
         arr = []
 
         if read_tag:
             data = ByteBuf(self.read_bytes())
             while data.has_data():
-                data.read_data_tag() # value_tag
+                data.read_data_tag()  # value_tag
                 arr.append(read_func(data))
         else:
             for _ in range(self.read_int()):
                 arr.append(read_func(self))
 
         return arr
-    
-    def read_dict[TKey, TValue](self, key_func: Callable[[ByteBuf], TKey], value_func: Callable[[ByteBuf], TValue], read_tag: bool = True) -> dict[TKey, TValue]:
+
+    def read_dict[TKey, TValue](
+        self,
+        key_func: Callable[[ByteBuf], TKey],
+        value_func: Callable[[ByteBuf], TValue],
+        read_tag: bool = True,
+    ) -> dict[TKey, TValue]:
         dict = {}
 
         if read_tag:
             data = ByteBuf(self.read_bytes())
             while data.has_data():
-                data.read_data_tag() # key_tag
+                data.read_data_tag()  # key_tag
                 key = key_func(data)
-                data.read_data_tag() # value_tag
+                data.read_data_tag()  # value_tag
                 value = value_func(data)
                 dict[key] = value
         else:
@@ -148,15 +162,58 @@ class ByteBuf:
                 key = key_func(self)
                 value = value_func(self)
                 dict[key] = value
-        
+
         return dict
-    
-    def read_nullable[TValue](self, read_func: Callable[[ByteBuf], TValue]) -> TValue | None:
+
+    def read_nullable[TValue](
+        self, read_func: Callable[[ByteBuf], TValue]
+    ) -> TValue | None:
         if self.read_bool():
             return read_func(self)
-    
+
         return None
-    
+
+    def read_fixed_object[TObject: SerializableObject](
+        self, clazz: type[TObject]
+    ) -> TObject:
+        data_len = self.read_fixed_int()
+        data = ByteBuf(self._fp.read(data_len))
+        value = clazz.from_buffer(data)
+        assert not data.has_data(), (
+            f"Did not read entire buffer when reading fixed object of type {clazz}"
+        )
+
+        return value
+
+    def read_fixed_array[TValue](
+        self, read_func: Callable[[ByteBuf], TValue]
+    ) -> list[TValue]:
+        arr = []
+
+        count = self.read_fixed_int()
+        self.read_data_tag()  # value_tag
+        for _ in range(count):
+            arr.append(read_func(self))
+
+        return arr
+
+    def read_fixed_dict[TKey, TValue](
+        self,
+        key_func: Callable[[ByteBuf], TKey],
+        value_func: Callable[[ByteBuf], TValue],
+    ) -> dict[TKey, TValue]:
+        dict = {}
+
+        count = self.read_fixed_int()
+        self.read_data_tag()  # key_tag
+        self.read_data_tag()  # value_tag
+        for _ in range(count):
+            key = key_func(self)
+            value = value_func(self)
+            dict[key] = value
+
+        return dict
+
     # write methods
 
     def write_byte(self, value: int):
@@ -164,55 +221,55 @@ class ByteBuf:
 
     def _write_compressed_unsigned(self, max_count: int, value: int):
         if 0 > value:
-            value = int.from_bytes(value.to_bytes(8), signed = False)
-        
-        if   value < (1 << 7):
+            value = int.from_bytes(value.to_bytes(max_count, signed=True), signed=False)
+
+        if value < (1 << 7):
             self.write_byte(value)
         elif value < (1 << 14):
             self.write_byte((value >> 8) | 0b10000000)
-            self.write_byte(value & 0xff)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 21):
             self.write_byte((value >> 16) | 0b11000000)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 28):
             self.write_byte((value >> 24) | 0b11100000)
-            self.write_byte((value >> 16) & 0xff)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 16) & 0xFF)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 35):
             self.write_byte((value >> 32) | 0b11110000)
-            self.write_byte((value >> 24) & 0xff)
-            self.write_byte((value >> 16) & 0xff)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 24) & 0xFF)
+            self.write_byte((value >> 16) & 0xFF)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 42):
             assert max_count > 4, "compressed int too small"
             self.write_byte((value >> 40) | 0b11111000)
-            self.write_byte((value >> 32) & 0xff)
-            self.write_byte((value >> 24) & 0xff)
-            self.write_byte((value >> 16) & 0xff)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 32) & 0xFF)
+            self.write_byte((value >> 24) & 0xFF)
+            self.write_byte((value >> 16) & 0xFF)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 45):
             assert max_count > 4, "compressed int too small"
             self.write_byte((value >> 48) | 0b11111100)
-            self.write_byte((value >> 40) & 0xff)
-            self.write_byte((value >> 32) & 0xff)
-            self.write_byte((value >> 24) & 0xff)
-            self.write_byte((value >> 16) & 0xff)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 40) & 0xFF)
+            self.write_byte((value >> 32) & 0xFF)
+            self.write_byte((value >> 24) & 0xFF)
+            self.write_byte((value >> 16) & 0xFF)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         elif value < (1 << 56):
             assert max_count > 4, "compressed int too small"
             self.write_byte(0b11111110)
-            self.write_byte((value >> 48) & 0xff)
-            self.write_byte((value >> 40) & 0xff)
-            self.write_byte((value >> 32) & 0xff)
-            self.write_byte((value >> 24) & 0xff)
-            self.write_byte((value >> 16) & 0xff)
-            self.write_byte((value >> 8) & 0xff)
-            self.write_byte(value & 0xff)
+            self.write_byte((value >> 48) & 0xFF)
+            self.write_byte((value >> 40) & 0xFF)
+            self.write_byte((value >> 32) & 0xFF)
+            self.write_byte((value >> 24) & 0xFF)
+            self.write_byte((value >> 16) & 0xFF)
+            self.write_byte((value >> 8) & 0xFF)
+            self.write_byte(value & 0xFF)
         else:
             assert max_count > 4, "compressed int too small"
             self.write_byte(0b11111111)
@@ -229,7 +286,7 @@ class ByteBuf:
 
     def write_long(self, value: int):
         self._write_compressed_unsigned(8, value)
-    
+
     def write_net_header(self, value: int):
         self._fp.write(value.to_bytes(4, "big"))
 
@@ -262,6 +319,15 @@ class ByteBuf:
     def write_data_tag(self, value: DataTag):
         self.write_short(value.to_value())
 
+    def write_fixed_short(self, value: int) -> None:
+        self._fp.write(value.to_bytes(2, "little", signed=True))
+
+    def write_fixed_int(self, value: int) -> None:
+        self._fp.write(value.to_bytes(4, "little", signed=True))
+
+    def write_fixed_long(self, value: int) -> None:
+        self._fp.write(value.to_bytes(8, "little", signed=True))
+
     def write_object(self, obj: SerializableObject, write_size: bool = True):
         if not write_size:
             obj.serialize(self)
@@ -270,7 +336,13 @@ class ByteBuf:
             obj.serialize(buf)
             self.write_bytes(buf.get_buffer())
 
-    def write_array[TValue](self, type: DataTagType, value: list[TValue], write_func: Callable[[ByteBuf, TValue], None], write_tag: bool = True):
+    def write_array[TValue](
+        self,
+        type: DataTagType,
+        value: list[TValue],
+        write_func: Callable[[ByteBuf, TValue], None],
+        write_tag: bool = True,
+    ):
         if not write_tag:
             self.write_int(len(value))
             for element in value:
@@ -284,10 +356,15 @@ class ByteBuf:
 
             self.write_bytes(buf.get_buffer())
 
-    def write_dict[TKey, TValue](self, key_type: DataTagType, value_type: DataTagType, value: dict[TKey, TValue], 
-                   key_func: Callable[[ByteBuf, TKey], None],
-                   value_func: Callable[[ByteBuf, TValue], None],
-                   write_tag: bool = True):
+    def write_dict[TKey, TValue](
+        self,
+        key_type: DataTagType,
+        value_type: DataTagType,
+        value: dict[TKey, TValue],
+        key_func: Callable[[ByteBuf, TKey], None],
+        value_func: Callable[[ByteBuf, TValue], None],
+        write_tag: bool = True,
+    ):
         if not write_tag:
             self.write_int(len(value))
             for key, element in value.items():
@@ -302,22 +379,60 @@ class ByteBuf:
                 key_func(buf, key)
                 buf.write_data_tag(value_tag)
                 value_func(buf, element)
-            
+
             self.write_bytes(buf.get_buffer())
 
-    def write_nullable[TValue](self, value: TValue | None, write_func: Callable[[ByteBuf, TValue], None]):
+    def write_nullable[TValue](
+        self, value: TValue | None, write_func: Callable[[ByteBuf, TValue], None]
+    ):
         if value is not None:
             self.write_bool(True)
             write_func(self, value)
         else:
             self.write_bool(False)
 
+    def write_fixed_object(self, obj: SerializableObject):
+        buf = ByteBuf()
+        obj.serialize(buf)
+        data = buf.get_buffer()
+
+        self.write_fixed_int(len(data))
+        self._fp.write(data)
+
+    def write_fixed_array[TValue](
+        self,
+        type: DataTagType,
+        value: list[TValue],
+        write_func: Callable[[ByteBuf, TValue], None],
+    ):
+        self.write_fixed_int(len(value))
+        self.write_data_tag(DataTag(0, type))
+        for element in value:
+            write_func(self, element)
+
+    def write_fixed_dict[TKey, TValue](
+        self,
+        key_type: DataTagType,
+        value_type: DataTagType,
+        value: dict[TKey, TValue],
+        key_func: Callable[[ByteBuf, TKey], None],
+        value_func: Callable[[ByteBuf, TValue], None],
+    ):
+        self.write_fixed_int(len(value))
+        self.write_data_tag(DataTag(1, key_type))
+        self.write_data_tag(DataTag(2, value_type))
+        for element_key, element_value in value.items():
+            key_func(self, element_key)
+            value_func(self, element_value)
+
+    # helper methods
+
     def has_data(self) -> bool:
         return self._fp.tell() != self._size
 
     def get_buffer(self) -> bytes:
         return self._fp.getvalue()
-    
+
     def skip_value(self, tag: DataTag):
         match tag.type:
             case DataTagType.BOOL:
@@ -340,6 +455,20 @@ class ByteBuf:
                 val = self.read_bytes()
             case DataTagType.STRING:
                 val = self.read_bytes()
+            case DataTagType.FIXED_COMPLEX:
+                val = self._fp.read(self.read_fixed_int())
+            case DataTagType.FIXED_ARRAY:
+                size = self.read_fixed_int()
+                tag = self.read_data_tag()
+                val = [self.skip_value(tag) for _ in range(size)]
+            case DataTagType.FIXED_DICT:
+                size = self.read_fixed_int()
+                key_tag = self.read_data_tag()
+                value_tag = self.read_data_tag()
+                val = {
+                    self.skip_value(key_tag): self.skip_value(value_tag)
+                    for _ in range(size)
+                }
             case _:
                 val = None
                 assert False, tag
