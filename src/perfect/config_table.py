@@ -84,6 +84,21 @@ class ConfigTable:
             case _:
                 assert False, f"Tried to read invalid type {type} in config table {self.name}"
 
+    def load_one[T: SerializableObject](self, base_directory: str) -> T: # type: ignore
+        return self._mode_checked_load(base_directory, "one") # type: ignore
+    
+    def load_map[TValueType: ValueType, TEntry: SerializableObject](self, base_directory: str) -> dict[TValueType, TEntry]: # type: ignore
+        return self._mode_checked_load(base_directory, "map") # type: ignore
+    
+    def load_bmap[TKey: ValueType, TSubKey: ValueType, TEntry: SerializableObject](self, base_directory: str) -> dict[TKey, dict[TSubKey, TEntry]]: # type: ignore
+        return self._mode_checked_load(base_directory, "bmap") # type: ignore
+
+    def _mode_checked_load(self, base_directory: str, mode: str):
+        if mode != self._mode:
+            raise ValueError(f"cannot load table of type {self._mode} as {mode}.")
+        
+        return self.load(base_directory)
+
     def load(self, base_directory: str) -> SerializableObject | dict[ValueType, SerializableObject] | dict[ValueType, dict[ValueType, SerializableObject]]:
         if self._cached_value is not None:
             return self._cached_value
@@ -105,8 +120,9 @@ class ConfigTable:
         extra = ByteBuf.from_file(data_path + "extra")
         self._load_extra_data(extra)
 
-        tmap = ByteBuf.from_file(data_path + "tmap")
-        self._load_tmap_data(tmap)
+        if os.path.exists(data_path + "tmap"):
+            tmap = ByteBuf.from_file(data_path + "tmap")
+            self._load_tmap_data(tmap)
 
         data = ByteBuf.from_file(data_path)
 
