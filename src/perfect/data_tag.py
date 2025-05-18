@@ -16,8 +16,10 @@ class DataTagType(Enum):
     VECTOR3 = 9
     VECTOR4 = 10
     COMPLEX = 11 # object, list, dict
-    #COMPLEX2 = 12 unused
+    FIXED_COMPLEX = 12 # replication
     STRING = 13 # same format as COMPLEX
+    FIXED_ARRAY = 14 # replication
+    FIXED_DICT = 15 # replication
 
 class DataTag(NamedTuple):
     member_index: int
