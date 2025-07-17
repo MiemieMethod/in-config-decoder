@@ -31,8 +31,8 @@ methods = {
     'GetEBuf': None,
 }
 
-def decode_configs(I_N_CORE_DATA_PATH, is_repo = False):
-    with open("cfg/script/GenV2/1_5/Cfg/CfgTypes.lua") as f:
+def decode_configs(I_N_CORE_DATA_PATH, is_repo = False, version = ''):
+    with open(os.path.join("cfg/script/GenV2", version, "Cfg/CfgTypes.lua")) as f:
         lua = LuaRuntime(unpack_returned_tuples=True)
         config = lua.execute(f.read().replace('local UENewTable = _ENV.UENewTable', 'function UENewTable(size, value)\n\
             local t = {}\n\
@@ -177,13 +177,13 @@ def decode_configs(I_N_CORE_DATA_PATH, is_repo = False):
                 json.dump(loaded_table, f, ensure_ascii=False, indent=2)
 
 
-def decode_helper(I_N_CORE_DATA_PATH):
+def decode_helper(I_N_CORE_DATA_PATH, version = ''):
     def replace_enum_string(s):
         pattern = r'PaperEnum\.Cfg\.(\w+\.\w+)\.(\w+)'
         result = re.sub(pattern, r'enums["\1"].\2', s)
         return result
 
-    with open("cfg/script/GenV2/1_5/Cfg/CfgTypes.lua") as f:
+    with open(os.path.join("cfg/script/GenV2", version, "Cfg/CfgTypes.lua")) as f:
         lua = LuaRuntime(unpack_returned_tuples=True)
         config = lua.execute(f.read().replace('local UENewTable = _ENV.UENewTable', 'function UENewTable(size, value)\n\
         local t = {}\n\
@@ -216,9 +216,9 @@ def decode_helper(I_N_CORE_DATA_PATH):
             result[i] = temp[i]
         json.dump(result, f, ensure_ascii=False, indent=2)
 
-    with open("cfg/script/GenV2/Cfg/CfgTypes.lua") as f:
+    with open(os.path.join("cfg/script/GenV2", version, "Cfg/CfgTypes.lua")) as f:
         types = f.read().replace("return {InitTypes = InitTypes}", "")
-    with open("cfg/script/GenV2/Cfg/CfgHelper.lua") as f:
+    with open(os.path.join("cfg/script/GenV2", version, "Cfg/CfgHelper.lua")) as f:
         lua = LuaRuntime(unpack_returned_tuples=True)
         helper = lua.execute(types + replace_enum_string(f.read()))
     with open("cfg/config_helper.json", "w", encoding="utf-8") as f:

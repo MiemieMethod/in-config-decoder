@@ -187,9 +187,14 @@ def resort_event_wems(I_N_CORE_DATA_PATH, I_N_STRM_DATA_PATH):
                     source_sound_path = f"{I_N_CORE_DATA_PATH}/X6Game/Content/Audio/Media"
                 name = os.path.basename(source["AkMediaInformation"]["sourceID"]["@guidname"]).replace(".wav", "") if "@guidname" in source["AkMediaInformation"]["sourceID"] else source["AkMediaInformation"]["sourceID"]["@value"]
                 file2rename = f"{source_sound_path}/{source["AkMediaInformation"]["sourceID"]["@value"]}"
-                file_destination = f"cfg/sound{event_name_to_path[bnk_name]}/{path}/{index}{'~' if source_index else ''}{source_index}~{name}{'~' + lang if language_specific != "0" else ''}"
-                if not os.path.exists(f"cfg/sound{event_name_to_path[bnk_name]}/{path}"):
-                    os.makedirs(f"cfg/sound{event_name_to_path[bnk_name]}/{path}")
+                if bnk_name in event_name_to_path:
+                    file_destination = f"cfg/sound{event_name_to_path[bnk_name]}/{path}/{index}{'~' if source_index else ''}{source_index}~{name}{'~' + lang if language_specific != "0" else ''}"
+                    if not os.path.exists(f"cfg/sound{event_name_to_path[bnk_name]}/{path}"):
+                        os.makedirs(f"cfg/sound{event_name_to_path[bnk_name]}/{path}")
+                else:
+                    file_destination = f"cfg/sound/UnknownPaths/{bnk_name}/{path}/{index}{'~' if source_index else ''}{source_index}~{name}{'~' + lang if language_specific != "0" else ''}"
+                    if not os.path.exists(f"cfg/sound/UnknownPaths/{bnk_name}/{path}"):
+                        os.makedirs(f"cfg/sound/UnknownPaths/{bnk_name}/{path}")
                 results.append((file2rename, file_destination))
 
         if sound_id in loaded_items:
