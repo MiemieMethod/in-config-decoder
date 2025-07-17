@@ -105,8 +105,8 @@ class ConfigTable:
         extra = ByteBuf.from_file(data_path + "extra")
         self._load_extra_data(extra)
 
-        tmap = ByteBuf.from_file(data_path + "tmap")
-        self._load_tmap_data(tmap)
+        # tmap = ByteBuf.from_file(data_path + "tmap")
+        # self._load_tmap_data(tmap)
 
         data = ByteBuf.from_file(data_path)
 
