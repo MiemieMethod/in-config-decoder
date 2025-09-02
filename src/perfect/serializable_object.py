@@ -40,7 +40,7 @@ class SerializableObject(ABC):
                 return [process_element(x) for x in element]
             
             if isinstance(element, dict):
-                return {key: process_element(value) for (key, value) in element.items()}
+                return {process_element(key): process_element(value) for (key, value) in element.items()}
 
             if isinstance(element, Vector2):
                 return {"x": element.x, "y": element.y}
@@ -56,7 +56,7 @@ class SerializableObject(ABC):
             
             return element
         
-        value = {key: process_element(value) for (key, value) in self.__dict__.items()}
+        value = {process_element(key): process_element(value) for (key, value) in self.__dict__.items()}
         if include_type_name:
             value["_type_"] = self.NAME
 
