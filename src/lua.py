@@ -163,7 +163,8 @@ def fix_lua_bytecode(filename):
         data = bytearray(file.read())
     # data[4] = 84
     # fix_function(data, lua_bytecode['function'])
-    output_path = lua_bytecode['function']['source'].split('X6Game/Content/Script/')[-1]
+    # Monkeypatch replacing @ symbol
+    output_path = lua_bytecode['function']['source'].split('X6Game/Content/Script/')[-1].replace("@", "")
     return output_path, data
 
 def decode_lua_bytecode(output_base, full_file_path):
