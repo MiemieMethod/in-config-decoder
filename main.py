@@ -7,7 +7,7 @@ from src.sound import generate_bank_data, load_bank_xml, resort_event_wems
 
 import hashlib
 
-CURRENT_VERSION = '1_9'
+CURRENT_VERSION = '1_9' # change here to your current version, format: major_minor, e.g. 1_9 for 1.9
 
 def _hash_lua_path(relative_path: str) -> str:
     hashed_path = hashlib.sha1(relative_path.replace("\\", "/").lower().encode()).hexdigest().upper()
