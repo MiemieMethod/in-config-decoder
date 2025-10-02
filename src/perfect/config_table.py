@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 type ValueType = bool | int | str | float | dict[ValueType, ValueType] | list[ValueType] | SerializableObject | None
 
+
 class ConfigTable:
     name: str
 
@@ -29,9 +30,11 @@ class ConfigTable:
     _extra_list_tag: int
     _extra_list_begin_offset: int
 
-    _cached_value: None | SerializableObject | dict[ValueType, SerializableObject] | dict[ValueType, dict[ValueType, SerializableObject]]
+    _cached_value: None | SerializableObject | dict[ValueType, SerializableObject] | dict[
+        ValueType, dict[ValueType, SerializableObject]]
 
-    def __init__(self, name: str, file_name: str, value_type: str, mode: Literal["one", "map", "bmap"], registry: TypeRegistry) -> None:
+    def __init__(self, name: str, file_name: str, value_type: str, mode: Literal["one", "map", "bmap"],
+                 registry: TypeRegistry) -> None:
         self.name = name
 
         self._filename = file_name
@@ -84,29 +87,48 @@ class ConfigTable:
             case _:
                 assert False, f"Tried to read invalid type {type} in config table {self.name}"
 
-    def load(self, base_directory: str) -> SerializableObject | dict[ValueType, SerializableObject] | dict[ValueType, dict[ValueType, SerializableObject]]:
+    def load_one[T: SerializableObject](self, base_directory: str) -> T:  # type: ignore
+        return self._mode_checked_load(base_directory, "one")  # type: ignore
+
+    def load_map[TValueType: ValueType, TEntry: SerializableObject](self, base_directory: str) -> dict[
+        TValueType, TEntry]:  # type: ignore
+        return self._mode_checked_load(base_directory, "map")  # type: ignore
+
+    def load_bmap[TKey: ValueType, TSubKey: ValueType, TEntry: SerializableObject](self, base_directory: str) -> dict[
+        TKey, dict[TSubKey, TEntry]]:  # type: ignore
+        return self._mode_checked_load(base_directory, "bmap")  # type: ignore
+
+    def _mode_checked_load(self, base_directory: str, mode: str):
+        if mode != self._mode:
+            raise ValueError(f"cannot load table of type {self._mode} as {mode}.")
+
+        return self.load(base_directory)
+
+    def load(self, base_directory: str) -> SerializableObject | dict[ValueType, SerializableObject] | dict[
+        ValueType, dict[ValueType, SerializableObject]]:
         if self._cached_value is not None:
             return self._cached_value
-        
+
         data_path = os.path.join(base_directory, self._filename)
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"{data_path} does not exist.")
-    
+
         value_type = self._registry.get_by_name(self._value_type)
         if self._mode == "one":
             data = ByteBuf.from_file(data_path)
             entry_count = data.read_int()
             assert entry_count, f"Config table with one element had entry_count != 1, {entry_count}"
-            
+
             object = value_type.from_buffer(data)
             assert not data.has_data(), "Did not read entire config table with one element"
             return object
-        
+
         extra = ByteBuf.from_file(data_path + "extra")
         self._load_extra_data(extra)
 
-        # tmap = ByteBuf.from_file(data_path + "tmap")
-        # self._load_tmap_data(tmap)
+        if os.path.exists(data_path + "tmap"):
+            tmap = ByteBuf.from_file(data_path + "tmap")
+            self._load_tmap_data(tmap)
 
         data = ByteBuf.from_file(data_path)
 
@@ -125,7 +147,7 @@ class ConfigTable:
 
         self._cached_value = values
         return values
-    
+
     def _load_extra_data(self, extra: ByteBuf):
         def read_child_offsets():
             while extra.read_byte() > 0:
@@ -165,7 +187,7 @@ class ConfigTable:
                     if key_value not in self._key_to_offset:
                         self._key_to_offset[key_value] = {}
 
-                    self._key_to_offset[key_value][key_2_value] = row_begin # type: ignore
+                    self._key_to_offset[key_value][key_2_value] = row_begin  # type: ignore
                     read_child_offsets()
 
         assert extra.read_byte() == 0
@@ -177,17 +199,17 @@ class ConfigTable:
         entry_count = tmap.read_fixed_int()
 
         for _ in range(entry_count):
-            key = self._read_type(tmap, key_type, use_unreal_serialization = True)
+            key = self._read_type(tmap, key_type, use_unreal_serialization=True)
             if subkey_type != 0:
                 value: int | dict[ValueType, int] = {}
                 subkey_count = tmap.read_fixed_int()
                 for _ in range(subkey_count):
-                    subkey = self._read_type(tmap, subkey_type, use_unreal_serialization = True)
+                    subkey = self._read_type(tmap, subkey_type, use_unreal_serialization=True)
                     offset = tmap.read_fixed_int()
                     value[subkey] = offset
             else:
                 value = tmap.read_fixed_int()
 
             self._tmap_offsets[key] = value
-        
+
         assert not tmap.has_data()
