@@ -33,4 +33,4 @@ class SerializableUnion(SerializableObject):
         self.value = value_type.from_buffer(buf)
 
     def to_dict(self, decode_strings: bool = False, include_type_name: bool = True):
-        return self.value.to_dict(decode_strings = decode_strings, include_type_name = include_type_name) if self.value else {}
+        return self.value.to_dict(decode_strings = decode_strings, include_type_name = include_type_name) if self.value else None
