@@ -5,7 +5,13 @@ from src.lua import decode_luas, decode_lua_bytecode
 from src.config import decode_configs, decode_helper
 from src.sound import generate_bank_data, load_bank_xml, resort_event_wems
 
-CURRENT_VERSION = '1_6'
+import hashlib
+
+CURRENT_VERSION = '1_9'
+
+def _hash_lua_path(relative_path: str) -> str:
+    hashed_path = hashlib.sha1(relative_path.replace("\\", "/").lower().encode()).hexdigest().upper()
+    return f"X6Game/Content/Script/{hashed_path}"
 
 def decode_lua_and_configs(I_N_CORE_DATA_PATH):
     decode_luas(I_N_CORE_DATA_PATH)
@@ -13,16 +19,16 @@ def decode_lua_and_configs(I_N_CORE_DATA_PATH):
     decode_helper(I_N_CORE_DATA_PATH)
 
 def decode_infinity_nikki_data_repo(I_N_CORE_DATA_PATH):
-    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, r'X6Game/Content/Script/GenV2', CURRENT_VERSION, 'Cfg/1634995571.lua'))
+    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, _hash_lua_path(f"GenV2/{CURRENT_VERSION}/Cfg/CfgTypes.lua")))
     decode_configs(I_N_CORE_DATA_PATH, True, CURRENT_VERSION)
     decode_locres(I_N_CORE_DATA_PATH)
 
 def decode_just_configs(I_N_CORE_DATA_PATH):
-    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, r'X6Game/Content/Script/GenV2', CURRENT_VERSION, 'Cfg/1634995571.lua'))
+    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, _hash_lua_path(f"GenV2/{CURRENT_VERSION}/Cfg/CfgTypes.lua")))
     decode_configs(I_N_CORE_DATA_PATH, version=CURRENT_VERSION)
 
 def decode_just_helper(I_N_CORE_DATA_PATH):
-    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, r'X6Game/Content/Script/GenV2', CURRENT_VERSION, 'Cfg/1759129374.lua'))
+    decode_lua_bytecode(r'cfg/script', os.path.join(I_N_CORE_DATA_PATH, _hash_lua_path(f"GenV2/{CURRENT_VERSION}/Cfg/CfgHelper.lua")))
     decode_helper(I_N_CORE_DATA_PATH)
 
 def resort_audio(I_N_CORE_DATA_PATH, I_N_STRM_DATA_PATH):
